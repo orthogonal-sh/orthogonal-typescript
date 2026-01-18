@@ -113,34 +113,41 @@ describe("Orthogonal", () => {
       ).rejects.toThrow("Insufficient funds. Add USDC at https://orthogonal.sh");
     });
 
-    it("should throw timeout error", async () => {
-      const abortError = new Error("Aborted");
-      abortError.name = "AbortError";
-      mockFetch.mockRejectedValueOnce(abortError);
+    it("should throw error with nested data.error message", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            price: "0",
+            data: { error: "Missing required parameter: q" },
+          }),
+      });
 
-      const client = new Orthogonal({ apiKey: "test", timeout: 100 });
+      const client = new Orthogonal({ apiKey: "test" });
 
       await expect(
         client.run({ api: "andi", path: "/search" })
-      ).rejects.toThrow("Request timed out");
+      ).rejects.toThrow("Missing required parameter: q");
     });
 
-    it("should use custom baseUrl", async () => {
+    it("should include User-Agent header", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: () => Promise.resolve({ success: true, price: "0", data: {} }),
       });
 
-      const client = new Orthogonal({
-        apiKey: "test",
-        baseUrl: "https://custom.api.com",
-      });
-
+      const client = new Orthogonal({ apiKey: "test" });
       await client.run({ api: "test", path: "/test" });
 
       expect(mockFetch).toHaveBeenCalledWith(
-        "https://custom.api.com/v1/run",
-        expect.anything()
+        expect.any(String),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "User-Agent": "@orth/sdk/0.1.0",
+          }),
+        })
       );
     });
   });
