@@ -45,7 +45,7 @@ console.log(response.price); // e.g., "0.01"
 {
   "success": false,
   "price": "0",
-  "error": "API not-found not found or not active"
+  "error": "API my-api not found or not active"
 }
 ```
 
