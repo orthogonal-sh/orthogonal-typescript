@@ -48,7 +48,6 @@ jobs:
             echo "type=${{ inputs.bump }}" >> $GITHUB_OUTPUT
           else
             COMMITS=$(git log --oneline $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD 2>/dev/null || git log --oneline -10)
-            # Check for breaking changes on ANY commit type
             if echo "$COMMITS" | grep -qE "^[a-f0-9]+ [a-z]+(\(.+\))?!:"; then
               echo "type=major" >> $GITHUB_OUTPUT
             elif echo "$COMMITS" | grep -qE "^[a-f0-9]+ (feat|feature)(\(.+\))?:"; then
@@ -62,6 +61,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Pull latest
+        run: git pull --rebase origin main
 
       - name: Bump version
         id: version
