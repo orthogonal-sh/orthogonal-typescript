@@ -4,6 +4,8 @@
 export interface OrthogonalConfig {
   /** Your Orthogonal API key (starts with orth_live_ or orth_test_) */
   apiKey: string;
+  /** Custom headers to include in all requests */
+  headers?: Record<string, string>;
 }
 
 /**

@@ -25,12 +25,14 @@ const BASE_URL = "https://api.orth.sh";
  */
 export class Orthogonal {
   private apiKey: string;
+  private customHeaders: Record<string, string>;
 
   constructor(config: OrthogonalConfig) {
     if (!config.apiKey) {
       throw new Error("Orthogonal API key is required");
     }
     this.apiKey = config.apiKey;
+    this.customHeaders = config.headers || {};
   }
 
   /**
@@ -45,6 +47,8 @@ export class Orthogonal {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
         "User-Agent": `@orth/sdk/${VERSION}`,
+        "X-Orthogonal-Source": "sdk",
+        ...this.customHeaders,
       },
       body: JSON.stringify({ api, path, query, body }),
     });
