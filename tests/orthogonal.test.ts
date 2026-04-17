@@ -212,6 +212,58 @@ describe("Orthogonal", () => {
       ).rejects.toThrow("Request failed with status 503");
     });
 
+    it("should fall through to JSON when .message is an empty string", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: () =>
+          Promise.resolve({
+            data: { error: { type: "invalid_request_error", message: "" } },
+          }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      // Must NOT throw `Error("")` — should surface the full payload instead.
+      await expect(
+        client.run({ api: "x", path: "/y" })
+      ).rejects.toThrow(/invalid_request_error/);
+    });
+
+    it("should fall through to status when top-level error is an empty string", async () => {
+      // Reproduces the `??` vs `||` regression: with `??`, an empty string at
+      // `data.data.error` stops the chain and a nested `data.error` is ignored.
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () =>
+          Promise.resolve({
+            data: { error: "" },
+            error: "upstream unavailable",
+          }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "x", path: "/y" })
+      ).rejects.toThrow("upstream unavailable");
+    });
+
+    it("should never throw Error(\"\") when error fields are empty strings", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ data: { error: "" }, error: "" }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "x", path: "/y" })
+      ).rejects.toThrow("Request failed with status 500");
+    });
+
     it("should include User-Agent header", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
