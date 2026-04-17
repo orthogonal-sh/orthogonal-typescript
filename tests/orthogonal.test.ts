@@ -132,6 +132,138 @@ describe("Orthogonal", () => {
       ).rejects.toThrow("Missing required parameter: q");
     });
 
+    it("should surface upstream object error's .message field (e.g. PDL)", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            price: "0",
+            data: {
+              error: {
+                type: ["invalid_request_error"],
+                message:
+                  "Does not meet minimum combination of required data points.",
+              },
+            },
+          }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "peopledatalabs", path: "/v5/person/enrich" })
+      ).rejects.toThrow(
+        "Does not meet minimum combination of required data points."
+      );
+    });
+
+    it("should JSON-stringify a structured error without a .message", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 422,
+        json: () =>
+          Promise.resolve({
+            success: false,
+            data: { error: { code: "bad_input", field: "q" } },
+          }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "some-api", path: "/endpoint" })
+      ).rejects.toThrow('{"code":"bad_input","field":"q"}');
+    });
+
+    it("should never throw '[object Object]' for any error shape", async () => {
+      const shapes = [
+        { data: { error: { a: 1, b: 2 } } },
+        { error: { details: ["oops"] } },
+        { data: { error: [1, 2, 3] } },
+      ];
+
+      for (const body of shapes) {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve(body),
+        });
+
+        const client = new Orthogonal({ apiKey: "test" });
+        await expect(
+          client.run({ api: "x", path: "/y" })
+        ).rejects.not.toThrow("[object Object]");
+      }
+    });
+
+    it("should fall back to status message when no error field is present", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 503,
+        json: () => Promise.resolve({ success: false }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "x", path: "/y" })
+      ).rejects.toThrow("Request failed with status 503");
+    });
+
+    it("should fall through to JSON when .message is an empty string", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: () =>
+          Promise.resolve({
+            data: { error: { type: "invalid_request_error", message: "" } },
+          }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      // Must NOT throw `Error("")` — should surface the full payload instead.
+      await expect(
+        client.run({ api: "x", path: "/y" })
+      ).rejects.toThrow(/invalid_request_error/);
+    });
+
+    it("should fall through to status when top-level error is an empty string", async () => {
+      // Reproduces the `??` vs `||` regression: with `??`, an empty string at
+      // `data.data.error` stops the chain and a nested `data.error` is ignored.
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () =>
+          Promise.resolve({
+            data: { error: "" },
+            error: "upstream unavailable",
+          }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "x", path: "/y" })
+      ).rejects.toThrow("upstream unavailable");
+    });
+
+    it("should never throw Error(\"\") when error fields are empty strings", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({ data: { error: "" }, error: "" }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "x", path: "/y" })
+      ).rejects.toThrow("Request failed with status 500");
+    });
+
     it("should include User-Agent header", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
