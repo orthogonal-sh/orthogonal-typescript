@@ -99,11 +99,11 @@ describe("Orthogonal", () => {
       ).rejects.toThrow("Invalid API key. Visit https://orthogonal.sh to get one!");
     });
 
-    it("should throw helpful error on 402", async () => {
+    it("should fall back to a generic funds message on 402 with no body message", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 402,
-        json: () => Promise.resolve({ error: "Insufficient funds" }),
+        json: () => Promise.resolve({}),
       });
 
       const client = new Orthogonal({ apiKey: "test" });
@@ -111,6 +111,24 @@ describe("Orthogonal", () => {
       await expect(
         client.run({ api: "andi", path: "/search" })
       ).rejects.toThrow("Insufficient funds. Add USDC at https://orthogonal.sh");
+    });
+
+    it("should surface the server's specific 402 message when present", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 402,
+        json: () =>
+          Promise.resolve({
+            error:
+              "Daily spend limit reached for this API key. Limit: $10.00, spent today: $10.00.",
+          }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "andi", path: "/search" })
+      ).rejects.toThrow("Daily spend limit reached for this API key");
     });
 
     it("should throw error with nested data.error message", async () => {

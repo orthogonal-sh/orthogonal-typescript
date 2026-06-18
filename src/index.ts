@@ -93,7 +93,16 @@ export class Orthogonal {
         throw new Error("Invalid API key. Visit https://orthogonal.sh to get one!");
       }
       if (response.status === 402) {
-        throw new Error("Insufficient funds. Add USDC at https://orthogonal.sh");
+        // 402 now covers several distinct cases: insufficient credits, a per-key
+        // daily spend limit, and an account-wide daily spend limit. Surface the
+        // server's specific message when present so callers know which applies.
+        const rawError = data.data?.error || data.error;
+        const serverMessage = formatError(rawError, response.status);
+        throw new Error(
+          serverMessage.startsWith("Request failed")
+            ? "Insufficient funds. Add USDC at https://orthogonal.sh"
+            : serverMessage,
+        );
       }
       // Check for nested error in data.error (e.g., from target API). Use `||`
       // (not `??`) so that falsy values like `""` still fall through the chain
