@@ -96,21 +96,54 @@ describe("Orthogonal", () => {
 
       await expect(
         client.run({ api: "andi", path: "/search" })
-      ).rejects.toThrow("Invalid API key. Visit https://orthogonal.sh to get one!");
+      ).rejects.toThrow("Invalid API key. Visit https://orthogonal.com to get one!");
     });
 
-    it("should throw helpful error on 402", async () => {
+    it("should fall back to a generic funds message on 402 with no body message", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 402,
-        json: () => Promise.resolve({ error: "Insufficient funds" }),
+        json: () => Promise.resolve({}),
       });
 
       const client = new Orthogonal({ apiKey: "test" });
 
       await expect(
         client.run({ api: "andi", path: "/search" })
-      ).rejects.toThrow("Insufficient funds. Add USDC at https://orthogonal.sh");
+      ).rejects.toThrow("Insufficient credits. Top up your balance at https://www.orthogonal.com/dashboard/balance");
+    });
+
+    it("should surface the server's specific 402 message when present", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 402,
+        json: () =>
+          Promise.resolve({
+            error:
+              "Daily spend limit reached for this API key. Limit: $10.00, spent today: $10.00.",
+          }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "andi", path: "/search" })
+      ).rejects.toThrow("Daily spend limit reached for this API key");
+    });
+
+    it("should surface a 402 message even when it begins with 'Request failed'", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 402,
+        json: () =>
+          Promise.resolve({ error: "Request failed: upstream billing outage" }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "andi", path: "/search" })
+      ).rejects.toThrow("Request failed: upstream billing outage");
     });
 
     it("should throw error with nested data.error message", async () => {
