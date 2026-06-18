@@ -95,13 +95,17 @@ export class Orthogonal {
       if (response.status === 402) {
         // 402 now covers several distinct cases: insufficient credits, a per-key
         // daily spend limit, and an account-wide daily spend limit. Surface the
-        // server's specific message when present so callers know which applies.
+        // server's specific message when it provided one so callers know which
+        // applies. We test `rawError` directly (not formatError's output) so a
+        // real message that happens to start with "Request failed" isn't mistaken
+        // for the no-message fallback.
         const rawError = data.data?.error || data.error;
-        const serverMessage = formatError(rawError, response.status);
+        const hasServerMessage =
+          rawError !== undefined && rawError !== null && rawError !== "";
         throw new Error(
-          serverMessage.startsWith("Request failed")
-            ? "Insufficient funds. Add USDC at https://orthogonal.sh"
-            : serverMessage,
+          hasServerMessage
+            ? formatError(rawError, response.status)
+            : "Insufficient funds. Add USDC at https://orthogonal.sh",
         );
       }
       // Check for nested error in data.error (e.g., from target API). Use `||`

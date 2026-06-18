@@ -131,6 +131,21 @@ describe("Orthogonal", () => {
       ).rejects.toThrow("Daily spend limit reached for this API key");
     });
 
+    it("should surface a 402 message even when it begins with 'Request failed'", async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 402,
+        json: () =>
+          Promise.resolve({ error: "Request failed: upstream billing outage" }),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      await expect(
+        client.run({ api: "andi", path: "/search" })
+      ).rejects.toThrow("Request failed: upstream billing outage");
+    });
+
     it("should throw error with nested data.error message", async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
