@@ -90,7 +90,7 @@ export class Orthogonal {
     if (!response.ok) {
       // Provide helpful error messages for common cases
       if (response.status === 401) {
-        throw new Error("Invalid API key. Visit https://orthogonal.sh to get one!");
+        throw new Error("Invalid API key. Visit https://orthogonal.com to get one!");
       }
       if (response.status === 402) {
         // 402 now covers several distinct cases: insufficient credits, a per-key
@@ -105,7 +105,7 @@ export class Orthogonal {
         throw new Error(
           hasServerMessage
             ? formatError(rawError, response.status)
-            : "Insufficient funds. Add USDC at https://orthogonal.sh",
+            : "Insufficient credits. Top up your balance at https://www.orthogonal.com/dashboard/balance",
         );
       }
       // Check for nested error in data.error (e.g., from target API). Use `||`

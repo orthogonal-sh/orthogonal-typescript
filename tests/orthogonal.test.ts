@@ -96,7 +96,7 @@ describe("Orthogonal", () => {
 
       await expect(
         client.run({ api: "andi", path: "/search" })
-      ).rejects.toThrow("Invalid API key. Visit https://orthogonal.sh to get one!");
+      ).rejects.toThrow("Invalid API key. Visit https://orthogonal.com to get one!");
     });
 
     it("should fall back to a generic funds message on 402 with no body message", async () => {
@@ -110,7 +110,7 @@ describe("Orthogonal", () => {
 
       await expect(
         client.run({ api: "andi", path: "/search" })
-      ).rejects.toThrow("Insufficient funds. Add USDC at https://orthogonal.sh");
+      ).rejects.toThrow("Insufficient credits. Top up your balance at https://www.orthogonal.com/dashboard/balance");
     });
 
     it("should surface the server's specific 402 message when present", async () => {
