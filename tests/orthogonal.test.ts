@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import Orthogonal from "../src/index";
+import Orthogonal, { OrthogonalRunError } from "../src/index";
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -163,6 +163,46 @@ describe("Orthogonal", () => {
       await expect(
         client.run({ api: "andi", path: "/search" })
       ).rejects.toThrow("Missing required parameter: q");
+    });
+
+    it("throws OrthogonalRunError carrying the _orthogonal hint + status + body", async () => {
+      const body = {
+        success: false,
+        error: "API request failed with status 400",
+        _orthogonal: {
+          error: "orthogonal_endpoint_contract",
+          unexpected_query_fields: ["company"],
+          expected_schema: {
+            queryParams: { organization: { type: "string" } },
+          },
+        },
+      };
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: () => Promise.resolve(body),
+      });
+
+      const client = new Orthogonal({ apiKey: "test" });
+
+      let err: any;
+      try {
+        await client.run({
+          api: "fantastic-jobs",
+          path: "/v1/active-ats",
+          query: { time_frame: "1h", company: "Google" },
+        });
+      } catch (e) {
+        err = e;
+      }
+
+      expect(err).toBeInstanceOf(OrthogonalRunError);
+      expect(err).toBeInstanceOf(Error); // backward compatible
+      expect(err.status).toBe(400);
+      expect((err.orthogonal as any).unexpected_query_fields).toEqual([
+        "company",
+      ]);
+      expect(err.responseBody).toEqual(body);
     });
 
     it("should surface upstream object error's .message field (e.g. PDL)", async () => {

@@ -36,6 +36,37 @@ function formatError(raw: unknown, status: number): string {
 }
 
 /**
+ * Error thrown by {@link Orthogonal.run} on a non-2xx response.
+ *
+ * Extends `Error` (so existing `catch (e) { e.message }` keeps working) but also
+ * carries the structured server payload. On a contract violation the API returns
+ * an `_orthogonal` self-correction hint (expected schema, unexpected/missing
+ * fields, numeric bounds) — exposed here as `orthogonal` so an agent can fix the
+ * request and retry instead of only seeing the terse message.
+ */
+export class OrthogonalRunError extends Error {
+  /** HTTP status of the failed response. */
+  status: number;
+  /** The API's `_orthogonal` self-correction hint, when present. */
+  orthogonal?: unknown;
+  /** The full parsed response body. */
+  responseBody?: unknown;
+
+  constructor(
+    message: string,
+    opts: { status: number; orthogonal?: unknown; responseBody?: unknown },
+  ) {
+    super(message);
+    this.name = "OrthogonalRunError";
+    this.status = opts.status;
+    this.orthogonal = opts.orthogonal;
+    this.responseBody = opts.responseBody;
+    // Restore the prototype chain for instanceof across the compiled target.
+    Object.setPrototypeOf(this, OrthogonalRunError.prototype);
+  }
+}
+
+/**
  * Orthogonal SDK client
  *
  * @example
@@ -88,9 +119,13 @@ export class Orthogonal {
     const data = await response.json();
 
     if (!response.ok) {
+      const orthogonal = (data as any)?._orthogonal;
       // Provide helpful error messages for common cases
       if (response.status === 401) {
-        throw new Error("Invalid API key. Visit https://orthogonal.com to get one!");
+        throw new OrthogonalRunError(
+          "Invalid API key. Visit https://orthogonal.com to get one!",
+          { status: 401, orthogonal, responseBody: data },
+        );
       }
       if (response.status === 402) {
         // 402 now covers several distinct cases: insufficient credits, a per-key
@@ -102,10 +137,11 @@ export class Orthogonal {
         const rawError = data.data?.error || data.error;
         const hasServerMessage =
           rawError !== undefined && rawError !== null && rawError !== "";
-        throw new Error(
+        throw new OrthogonalRunError(
           hasServerMessage
             ? formatError(rawError, response.status)
             : "Insufficient credits. Top up your balance at https://www.orthogonal.com/dashboard/balance",
+          { status: 402, orthogonal, responseBody: data },
         );
       }
       // Check for nested error in data.error (e.g., from target API). Use `||`
@@ -113,7 +149,11 @@ export class Orthogonal {
       // to the status-based fallback inside `formatError`.
       const rawError = data.data?.error || data.error;
       const errorMessage = formatError(rawError, response.status);
-      throw new Error(errorMessage);
+      throw new OrthogonalRunError(errorMessage, {
+        status: response.status,
+        orthogonal,
+        responseBody: data,
+      });
     }
 
     return data as RunResponse;
