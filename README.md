@@ -180,7 +180,8 @@ The package ships with type definitions and both ESM and CommonJS builds — no 
 
 ## Related
 
-- **[`@orth/cli`](https://www.npmjs.com/package/@orth/cli)** — the Orthogonal command-line tool for discovering and calling APIs from your terminal.
+- **[`@orth/cli`](https://www.npmjs.com/package/@orth/cli)** — the Orthogonal command-line tool.
+- **[`orth`](https://pypi.org/project/orth/)** — the official Python SDK.
 
 ## License
 
