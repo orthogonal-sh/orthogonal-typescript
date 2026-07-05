@@ -1,6 +1,6 @@
 {
   "name": "@orth/sdk",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "TypeScript SDK to call any API on the Orthogonal platform",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
