@@ -2,9 +2,9 @@
 
 # Orthogonal SDK
 
-**Call any API on the [Orthogonal](https://orthogonal.com) platform from TypeScript — one client, one balance.**
+**TypeScript SDK for calling APIs on the [Orthogonal](https://orthogonal.com) platform.**
 
-Reach hundreds of production APIs through a single client and a single credit balance. No per-provider signups, keys, or contracts — authentication, routing, and billing are handled for you.
+Call any API on the Orthogonal platform through one client and one credit balance — authentication, routing, and billing are handled for you.
 
 [![npm version](https://img.shields.io/npm/v/@orth/sdk.svg?logo=npm&color=cb3837)](https://www.npmjs.com/package/@orth/sdk)
 [![npm downloads](https://img.shields.io/npm/dm/@orth/sdk.svg?color=cb3837)](https://www.npmjs.com/package/@orth/sdk)
@@ -29,7 +29,7 @@ Reach hundreds of production APIs through a single client and a single credit ba
 
 ## Why Orthogonal
 
-Orthogonal is a marketplace of production APIs behind one account and one balance:
+Orthogonal puts a catalog of APIs behind one account and one balance:
 
 - **One integration** — call any API on the platform through a single `run()` method.
 - **Pay per use** — a single credit balance instead of juggling dozens of provider subscriptions.
